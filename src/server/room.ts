@@ -9,14 +9,15 @@ import {
 } from "../lib/types";
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const ROOM_TTL_MS = 3 * 60 * 60 * 1000;
+const ROOM_TTL_MS = 90 * 60 * 1000;
 const MAX_DISPLAYS = 12;
 const TRANSITION_LEAD_MS: Record<TransitionMode, number> = {
   instant: 0,
-  countdown: 2000,
+  countdown: 3000,
   blink: 1600,
   fade: 1200,
 };
+const BLACK_GAP_MS = 350;
 
 function randomCode(length = 6): string {
   let out = "";
@@ -132,6 +133,8 @@ export class Room {
   nextChangeAt: number | null = null;
   transition: TransitionMode = "instant";
   transitionEndsAt: number | null = null;
+  blackEndsAt: number | null = null;
+  previousColors: Record<string, GoalColor> = {};
   lastCounts: Record<GoalColor, number> = { blue: 0, vermilion: 0, yellow: 0 };
   lastActivity = Date.now();
   private timer: NodeJS.Timeout | null = null;
@@ -237,6 +240,7 @@ export class Room {
     this.clearTimer();
     this.nextChangeAt = null;
     this.transitionEndsAt = null;
+    this.blackEndsAt = null;
     this.touch();
     this.broadcast();
   }
@@ -272,9 +276,14 @@ export class Room {
 
   private assignRound(fromManual: boolean) {
     this.clearTimer();
+    const previous: Record<string, GoalColor> = {};
+    for (const d of this.displays.values()) {
+      previous[d.id] = d.color;
+    }
     const colors = this.assignColors();
     this.roundId += 1;
     this.transition = pickTransition(this.config);
+    this.previousColors = previous;
 
     for (const [id, color] of Object.entries(colors)) {
       const d = this.displays.get(id);
@@ -283,7 +292,8 @@ export class Room {
 
     const lead = TRANSITION_LEAD_MS[this.transition];
     const now = Date.now();
-    this.transitionEndsAt = lead > 0 ? now + lead : null;
+    this.transitionEndsAt = now + lead;
+    this.blackEndsAt = now + lead + BLACK_GAP_MS;
 
     if (this.config.timingMode === "manual") {
       this.nextChangeAt = null;
@@ -292,7 +302,7 @@ export class Room {
     }
 
     const interval = nextIntervalMs(this.config);
-    this.nextChangeAt = now + Math.max(interval, lead + 200);
+    this.nextChangeAt = now + Math.max(interval, lead + BLACK_GAP_MS + 200);
     this.broadcast();
 
     const delay = this.nextChangeAt - Date.now();
@@ -322,10 +332,12 @@ export class Room {
       displays,
       roundId: this.roundId,
       primaryColors,
+      previousColors: { ...this.previousColors },
       colorCounts: { ...this.lastCounts },
       nextChangeAt: this.nextChangeAt,
       transition: this.transition,
       transitionEndsAt: this.transitionEndsAt,
+      blackEndsAt: this.blackEndsAt,
       serverNow: Date.now(),
     };
   }

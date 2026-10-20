@@ -37,10 +37,12 @@ export interface RoomSnapshot {
   displays: DisplayInfo[];
   roundId: number;
   primaryColors: Record<string, GoalColor>;
+  previousColors: Record<string, GoalColor>;
   colorCounts: Record<GoalColor, number>;
   nextChangeAt: number | null;
   transition: TransitionMode;
   transitionEndsAt: number | null;
+  blackEndsAt: number | null;
   serverNow: number;
 }
 
@@ -80,7 +82,7 @@ export const DEFAULT_CONFIG: RoomConfig = {
 
 export const COLORS: Record<GoalColor, string> = {
   blue: "#1E6BFF",
-  vermilion: "#E60012",
+  vermilion: "#E8917A",
   yellow: "#F5C400",
 };
 
