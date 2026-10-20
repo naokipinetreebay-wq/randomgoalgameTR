@@ -243,8 +243,8 @@ export function ControllerPanel({
           >
             <option value="instant">即時</option>
             <option value="countdown">カウントダウン（残り秒）</option>
-            <option value="blink">点滅</option>
-            <option value="fade">フェード</option>
+            <option value="blink">点滅（後半＝残り半分）</option>
+            <option value="fade">フェード（表示直後から）</option>
             <option value="random">毎回ランダム</option>
           </select>
         </label>
