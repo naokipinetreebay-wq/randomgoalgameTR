@@ -1,0 +1,154 @@
+import { createServer, IncomingMessage, ServerResponse } from "http";
+import { parse } from "url";
+import next from "next";
+import { WebSocketServer } from "ws";
+import { ClientSocket, RoomManager } from "./src/server/room";
+import type { ClientMessage } from "./src/lib/types";
+
+const dev = process.env.NODE_ENV !== "production";
+const hostname = process.env.HOSTNAME || "0.0.0.0";
+const port = parseInt(process.env.PORT || "3000", 10);
+
+const app = next({ dev, hostname, port });
+const handle = app.getRequestHandler();
+const rooms = new RoomManager();
+
+setInterval(() => rooms.sweep(), 60_000);
+
+function readJson(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      try {
+        const raw = Buffer.concat(chunks).toString("utf8");
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+function sendJson(res: ServerResponse, status: number, body: unknown) {
+  const data = JSON.stringify(body);
+  res.writeHead(status, {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(data),
+  });
+  res.end(data);
+}
+
+app.prepare().then(() => {
+  const server = createServer(async (req, res) => {
+    try {
+      const parsed = parse(req.url || "", true);
+
+      if (req.method === "POST" && parsed.pathname === "/api/rooms") {
+        const room = rooms.createRoom();
+        sendJson(res, 200, { code: room.code });
+        return;
+      }
+
+      if (req.method === "GET" && parsed.pathname === "/api/rooms/exists") {
+        const code = String(parsed.query.code || "").toUpperCase();
+        const room = rooms.get(code);
+        sendJson(res, 200, { exists: !!room });
+        return;
+      }
+
+      await handle(req, res, parsed);
+    } catch (err) {
+      console.error(err);
+      res.statusCode = 500;
+      res.end("internal error");
+    }
+  });
+
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on("upgrade", (req, socket, head) => {
+    const { pathname, query } = parse(req.url || "", true);
+    if (pathname !== "/ws") {
+      socket.destroy();
+      return;
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req, query);
+    });
+  });
+
+  wss.on("connection", (ws: ClientSocket, _req: IncomingMessage, query: Record<string, string | string[] | undefined>) => {
+    const code = String(query.room || "").toUpperCase();
+    const role = String(query.role || "") as "controller" | "display";
+    const deviceId = String(query.deviceId || "");
+
+    const room = rooms.get(code);
+    if (!room || (role !== "controller" && role !== "display") || !deviceId) {
+      ws.send(JSON.stringify({ type: "error", message: "ルームが見つかりません" }));
+      ws.close();
+      return;
+    }
+
+    ws.roomCode = code;
+    ws.role = role;
+    ws.deviceId = deviceId;
+
+    if (role === "controller") {
+      room.addController(ws);
+    } else {
+      const result = room.addDisplay(ws, deviceId);
+      if (!result.ok) {
+        ws.send(JSON.stringify({ type: "error", message: result.error }));
+        ws.close();
+        return;
+      }
+    }
+
+    ws.on("message", (raw) => {
+      let msg: ClientMessage;
+      try {
+        msg = JSON.parse(String(raw)) as ClientMessage;
+      } catch {
+        return;
+      }
+      const r = rooms.get(code);
+      if (!r) return;
+
+      switch (msg.type) {
+        case "updateConfig":
+          if (role === "controller") r.updateConfig(msg.config);
+          break;
+        case "setLabel":
+          if (role === "controller") r.setLabel(msg.deviceId, msg.label);
+          break;
+        case "start":
+          if (role === "controller") r.start();
+          break;
+        case "stop":
+          if (role === "controller") r.stop();
+          break;
+        case "next":
+          if (role === "controller") r.next();
+          break;
+        case "ping":
+          ws.send(JSON.stringify({ type: "pong" }));
+          break;
+        default:
+          break;
+      }
+    });
+
+    ws.on("close", () => {
+      const r = rooms.get(code);
+      if (!r) return;
+      if (role === "controller") r.removeController(ws);
+      else r.removeDisplaySocket(ws);
+    });
+  });
+
+  server.listen(port, hostname, () => {
+    console.log(`> Random Goal Game ready on http://${hostname}:${port}`);
+  });
+});
