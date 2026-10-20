@@ -331,12 +331,12 @@ select {
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 90vmin;
+  font-size: 78vmin;
   line-height: 1;
   font-weight: 800;
-  color: #1a1a1a;
-  -webkit-text-stroke: 0.018em rgba(255, 255, 255, 0.55);
-  text-shadow: 0 4px 0 rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.92);
+  -webkit-text-stroke: 0.012em rgba(0, 0, 0, 0.35);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   user-select: none;
 }

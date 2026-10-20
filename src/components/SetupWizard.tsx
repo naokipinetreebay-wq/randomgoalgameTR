@@ -303,7 +303,7 @@ export function SetupWizard({
                 }
               >
                 <option value="instant">即時</option>
-                <option value="countdown">カウントダウン</option>
+                <option value="countdown">カウントダウン（残り秒）</option>
                 <option value="blink">点滅</option>
                 <option value="fade">フェード</option>
                 <option value="random">毎回ランダム</option>
