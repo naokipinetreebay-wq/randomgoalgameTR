@@ -24,14 +24,19 @@ export default function HomePage() {
   return (
     <main className="home">
       <div className="home-card">
-        <p className="eyebrow">Random Goal Game TR</p>
-        <h1>ランダムゴールゲーム</h1>
+        <p className="eyebrow">Random Goal · TRwebapp</p>
+        <h1>ランダムゴール</h1>
         <p>
-          複数ゴールに青・朱・黄を割り当て、チームは自分の色のゴールを狙います。自分の色が無いラウンドは守り時間です。
+          青・朱・黄のゴールが切り替わります。自分の色を狙う。無いときは守り抜く。
         </p>
-        <button type="button" className="btn primary" disabled={busy} onClick={onCreate}>
-          {busy ? "作成中…" : "ルームを作成"}
-        </button>
+        <div className="home-actions">
+          <button type="button" className="btn primary" disabled={busy} onClick={onCreate}>
+            {busy ? "作成中…" : "ルームを作成"}
+          </button>
+          <a className="btn linkish" href="https://tr.rojiura.app">
+            TRwebapp ポータルへ
+          </a>
+        </div>
         {error ? (
           <p className="muted" style={{ marginTop: 12, color: "var(--bad)" }}>
             {error}
