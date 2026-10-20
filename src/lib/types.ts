@@ -82,7 +82,7 @@ export const DEFAULT_CONFIG: RoomConfig = {
 
 export const COLORS: Record<GoalColor, string> = {
   blue: "#1E6BFF",
-  vermilion: "#E8917A",
+  vermilion: "#E56B3A",
   yellow: "#F5C400",
 };
 
