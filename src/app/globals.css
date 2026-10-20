@@ -331,11 +331,13 @@ select {
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: min(40vw, 220px);
+  font-size: 90vmin;
+  line-height: 1;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   pointer-events: none;
+  user-select: none;
 }
 
 .status-bar {
