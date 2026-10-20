@@ -14,15 +14,18 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsx": "^4.19.0",
-    "ws": "^8.18.0"
-  },
-  "devDependencies": {
+    "ws": "^8.18.0",
+    "typescript": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/ws": "^8.5.0",
+    "@types/ws": "^8.5.0"
+  },
+  "devDependencies": {
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.5.0",
-    "typescript": "^5.0.0"
+    "eslint-config-next": "^15.5.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
