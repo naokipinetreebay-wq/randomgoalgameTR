@@ -5,6 +5,12 @@ import { COLORS, GoalColor, RoomSnapshot, TransitionMode } from "@/lib/types";
 
 const BLACK_MS = 280;
 
+function leadMsFor(transition: TransitionMode): number {
+  if (transition === "blink") return 1600;
+  if (transition === "fade") return 1200;
+  return 0;
+}
+
 export function DisplayScreen({
   snapshot,
   deviceId,
@@ -17,27 +23,12 @@ export function DisplayScreen({
   const colorChanged = prev !== next;
   const deviceOffset = snapshot.deviceOffsets?.[deviceId] ?? 0;
 
-  const phaseRef = useRef({
-    roundId: -1,
-    localStart: 0,
-    transition: "instant" as TransitionMode,
-    offset: 0,
-  });
   const skewRef = useRef(0);
-
-  if (snapshot.roundId !== phaseRef.current.roundId) {
-    phaseRef.current = {
-      roundId: snapshot.roundId,
-      localStart: Date.now(),
-      transition: snapshot.transition,
-      offset: deviceOffset,
-    };
-  }
   skewRef.current = snapshot.serverNow - Date.now();
 
   const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 50);
+    const id = setInterval(() => setTick((n) => n + 1), 100);
     return () => clearInterval(id);
   }, []);
 
@@ -63,17 +54,11 @@ export function DisplayScreen({
     };
   }, []);
 
-  const { localStart, transition, offset } = phaseRef.current;
-  const elapsed = Date.now() - localStart - offset;
-
-  const leadMs =
-    transition === "countdown"
-      ? 0
-      : transition === "blink"
-        ? 1600
-        : transition === "fade"
-          ? 1200
-          : 0;
+  const transition = snapshot.transition;
+  const leadMs = leadMsFor(transition);
+  const roundStartedAt = snapshot.roundStartedAt ?? snapshot.transitionEndsAt ?? Date.now();
+  const estNow = Date.now() + skewRef.current;
+  const elapsed = estNow - roundStartedAt - deviceOffset;
   const blackEnd = leadMs + (colorChanged ? BLACK_MS : 0);
 
   let style: React.CSSProperties = { background: COLORS[next] };
@@ -97,7 +82,6 @@ export function DisplayScreen({
   } else {
     style = { background: COLORS[next] };
     if (transition === "countdown" && snapshot.nextChangeAt != null) {
-      const estNow = Date.now() + skewRef.current;
       const remainMs = snapshot.nextChangeAt - estNow;
       if (remainMs > 0) {
         const sec = Math.max(1, Math.ceil(remainMs / 1000));

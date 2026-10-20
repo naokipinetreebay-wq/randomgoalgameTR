@@ -43,6 +43,7 @@ export interface RoomSnapshot {
   previousColors: Record<string, GoalColor>;
   deviceOffsets: Record<string, number>;
   colorCounts: Record<GoalColor, number>;
+  roundStartedAt: number | null;
   nextChangeAt: number | null;
   transition: TransitionMode;
   transitionEndsAt: number | null;

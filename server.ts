@@ -68,6 +68,25 @@ app.prepare().then(() => {
 
   const wss = new WebSocketServer({ noServer: true });
 
+  type AliveSocket = ClientSocket & { isAlive?: boolean };
+
+  const heartbeat = setInterval(() => {
+    for (const client of wss.clients) {
+      const ws = client as AliveSocket;
+      if (ws.isAlive === false) {
+        ws.terminate();
+        continue;
+      }
+      ws.isAlive = false;
+      try {
+        ws.ping();
+      } catch {
+        ws.terminate();
+      }
+    }
+  }, 15_000);
+  heartbeat.unref?.();
+
   server.on("upgrade", (req, socket, head) => {
     const { pathname, query } = parse(req.url || "", true);
     if (pathname !== "/ws") {
@@ -79,7 +98,7 @@ app.prepare().then(() => {
     });
   });
 
-  wss.on("connection", (ws: ClientSocket, _req: IncomingMessage, query: Record<string, string | string[] | undefined>) => {
+  wss.on("connection", (ws: AliveSocket, _req: IncomingMessage, query: Record<string, string | string[] | undefined>) => {
     const code = String(query.room || "").toUpperCase();
     const role = String(query.role || "") as "controller" | "display";
     const deviceId = String(query.deviceId || "");
@@ -94,6 +113,10 @@ app.prepare().then(() => {
     ws.roomCode = code;
     ws.role = role;
     ws.deviceId = deviceId;
+    ws.isAlive = true;
+    ws.on("pong", () => {
+      ws.isAlive = true;
+    });
 
     if (role === "controller") {
       room.addController(ws);
@@ -115,6 +138,7 @@ app.prepare().then(() => {
       }
       const r = rooms.get(code);
       if (!r) return;
+      ws.isAlive = true;
 
       switch (msg.type) {
         case "updateConfig":
@@ -133,6 +157,7 @@ app.prepare().then(() => {
           if (role === "controller") r.next();
           break;
         case "ping":
+          r.touch();
           ws.send(JSON.stringify({ type: "pong" }));
           break;
         default:
