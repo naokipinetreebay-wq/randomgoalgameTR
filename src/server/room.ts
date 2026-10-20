@@ -17,7 +17,7 @@ const TRANSITION_LEAD_MS: Record<TransitionMode, number> = {
   blink: 1600,
   fade: 1200,
 };
-const BLACK_GAP_MS = 350;
+const BLACK_GAP_MS = 280;
 
 function randomCode(length = 6): string {
   let out = "";
