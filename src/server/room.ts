@@ -5,6 +5,7 @@ import {
   GoalColor,
   RoomConfig,
   RoomSnapshot,
+  TimingMode,
   TransitionMode,
 } from "../lib/types";
 
@@ -210,6 +211,7 @@ export class Room {
   }
 
   updateConfig(partial: Partial<RoomConfig>) {
+    const prevTiming = this.config.timingMode;
     this.config = {
       ...this.config,
       ...partial,
@@ -234,6 +236,8 @@ export class Room {
       this.config.colorCount = 3;
     }
     this.touch();
+    // Timing mode changes while running used to leave a dead timer / no timer
+    this.applyTimingModeChange(prevTiming);
     this.broadcast();
   }
 
@@ -263,6 +267,46 @@ export class Room {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
+    }
+  }
+
+  private maxStaggerMs() {
+    return this.config.syncMode === "staggered"
+      ? Math.max(0, (this.config.staggerMaxSeconds ?? 2) * 1000)
+      : 0;
+  }
+
+  /** Schedule the next auto round from now (keeps current colors). */
+  private armAutoTimer() {
+    this.clearTimer();
+    if (!this.config.running || this.config.timingMode === "manual") {
+      this.nextChangeAt = null;
+      return;
+    }
+    const lead = TRANSITION_LEAD_MS[this.transition];
+    const interval = nextIntervalMs(this.config);
+    const now = Date.now();
+    this.nextChangeAt =
+      now + interval + this.maxStaggerMs() + lead + BLACK_GAP_MS + 200;
+    const delay = this.nextChangeAt - Date.now();
+    this.timer = setTimeout(() => {
+      if (this.config.running && this.config.timingMode !== "manual") {
+        this.assignRound(false);
+      }
+    }, Math.max(100, delay));
+  }
+
+  private applyTimingModeChange(prevTiming: TimingMode) {
+    if (!this.config.running) return;
+    if (this.config.timingMode === "manual") {
+      // Stop auto-advance immediately (otherwise it freezes after the current interval)
+      this.clearTimer();
+      this.nextChangeAt = null;
+      return;
+    }
+    // Switched back to fixed/random, or still auto but had no live timer
+    if (prevTiming === "manual" || !this.timer) {
+      this.armAutoTimer();
     }
   }
 
@@ -300,10 +344,7 @@ export class Room {
     }
 
     const ids = [...this.displays.keys()];
-    const maxStaggerMs =
-      this.config.syncMode === "staggered"
-        ? Math.max(0, (this.config.staggerMaxSeconds ?? 2) * 1000)
-        : 0;
+    const maxStaggerMs = this.maxStaggerMs();
     // Spread devices across 0..max so staggered mode is visibly not simultaneous
     const offsets: Record<string, number> = {};
     if (maxStaggerMs > 0 && ids.length > 1) {
@@ -328,19 +369,8 @@ export class Room {
       return;
     }
 
-    const interval = nextIntervalMs(this.config);
-    // Each device needs a full interval after its own offset
-    this.nextChangeAt =
-      now + interval + maxStaggerMs + lead + BLACK_GAP_MS + 200;
+    this.armAutoTimer();
     this.broadcast();
-
-    const delay = this.nextChangeAt - Date.now();
-    this.timer = setTimeout(() => {
-      if (this.config.running && this.config.timingMode !== "manual") {
-        this.assignRound(false);
-      }
-    }, Math.max(100, delay));
-
     void fromManual;
   }
 

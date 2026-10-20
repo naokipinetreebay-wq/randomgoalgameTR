@@ -190,9 +190,12 @@ export function ControllerPanel({
           >
             <option value="fixed">固定秒</option>
             <option value="random">ランダム秒</option>
-            <option value="manual">手動のみ</option>
+            <option value="manual">手動のみ（次へで切替）</option>
           </select>
         </label>
+        {cfg.timingMode === "manual" ? (
+          <p className="muted">手動中は自動では切り替わりません。「次へ」で進めてください。</p>
+        ) : null}
         {cfg.timingMode === "fixed" ? (
           <label className="field">
             <span>秒数: {cfg.fixedSeconds}</span>
