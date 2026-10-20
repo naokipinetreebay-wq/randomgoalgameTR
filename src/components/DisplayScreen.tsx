@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLORS, GoalColor, RoomSnapshot, TransitionMode } from "@/lib/types";
 
-function countdownDigit(remainingMs: number, maxSec: number): number {
-  if (remainingMs <= 0) return 1;
-  const raw = Math.ceil(remainingMs / 1000);
-  return Math.min(maxSec, Math.max(1, raw));
+const COUNTDOWN_MS = 3000;
+const BLACK_MS = 280;
+
+function digitForElapsed(elapsedMs: number): number {
+  if (elapsedMs < 1000) return 3;
+  if (elapsedMs < 2000) return 2;
+  return 1;
 }
 
 export function DisplayScreen({
@@ -18,28 +21,25 @@ export function DisplayScreen({
 }) {
   const next: GoalColor = snapshot.primaryColors[deviceId] || "blue";
   const prev: GoalColor = snapshot.previousColors?.[deviceId] ?? next;
-  const [now, setNow] = useState(() => Date.now());
+  const colorChanged = prev !== next;
 
   const phaseRef = useRef({
     roundId: -1,
-    leadEnd: 0,
-    blackEnd: 0,
-    offset: 0,
-    lastDigit: 3,
+    localStart: 0,
+    transition: "instant" as TransitionMode,
   });
 
   if (snapshot.roundId !== phaseRef.current.roundId) {
     phaseRef.current = {
       roundId: snapshot.roundId,
-      leadEnd: snapshot.transitionEndsAt ?? Date.now(),
-      blackEnd: snapshot.blackEndsAt ?? snapshot.transitionEndsAt ?? Date.now(),
-      offset: snapshot.serverNow ? Date.now() - snapshot.serverNow : 0,
-      lastDigit: 3,
+      localStart: Date.now(),
+      transition: snapshot.transition,
     };
   }
 
+  const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 100);
+    const id = setInterval(() => setTick((n) => n + 1), 50);
     return () => clearInterval(id);
   }, []);
 
@@ -65,89 +65,44 @@ export function DisplayScreen({
     };
   }, []);
 
-  const serverNow = now - phaseRef.current.offset;
-  const effect = useTransitionEffect(
-    snapshot.transition,
-    phaseRef.current.leadEnd,
-    phaseRef.current.blackEnd,
-    serverNow,
-    prev,
-    next,
-    phaseRef
-  );
+  const { localStart, transition } = phaseRef.current;
+  const elapsed = Math.max(0, Date.now() - localStart);
+
+  const leadMs =
+    transition === "countdown"
+      ? COUNTDOWN_MS
+      : transition === "blink"
+        ? 1600
+        : transition === "fade"
+          ? 1200
+          : 0;
+  const blackEnd = leadMs + (colorChanged ? BLACK_MS : 0);
+
+  let style: React.CSSProperties = { background: COLORS[next] };
+  let overlay: React.ReactNode = null;
+
+  if (elapsed < leadMs) {
+    style = { background: COLORS[prev] };
+    if (transition === "countdown") {
+      overlay = <div className="countdown-num">{digitForElapsed(elapsed)}</div>;
+    } else if (transition === "blink") {
+      const on = Math.floor(elapsed / 220) % 2 === 0;
+      style = on ? { background: COLORS[prev] } : { background: "#111111" };
+    } else if (transition === "fade") {
+      style = {
+        background: COLORS[prev],
+        opacity: Math.max(0.2, 1 - elapsed / leadMs),
+      };
+    }
+  } else if (elapsed < blackEnd && colorChanged) {
+    style = { background: "#000000" };
+  } else {
+    style = { background: COLORS[next] };
+  }
 
   return (
-    <div className="display-root" style={effect.style}>
-      {effect.overlay}
+    <div className="display-root" style={style}>
+      {overlay}
     </div>
   );
-}
-
-function useTransitionEffect(
-  transition: TransitionMode,
-  leadEnd: number,
-  blackEnd: number,
-  serverNow: number,
-  prev: GoalColor,
-  next: GoalColor,
-  phaseRef: React.MutableRefObject<{ lastDigit: number }>
-) {
-  return useMemo(() => {
-    const colorChanged = prev !== next;
-
-    if (serverNow >= blackEnd) {
-      phaseRef.current.lastDigit = 3;
-      return {
-        style: { background: COLORS[next] } as React.CSSProperties,
-        overlay: null as React.ReactNode,
-      };
-    }
-
-    if (serverNow >= leadEnd) {
-      if (!colorChanged) {
-        return { style: { background: COLORS[next] }, overlay: null };
-      }
-      return { style: { background: "#000000" }, overlay: null };
-    }
-
-    const remaining = Math.max(0, leadEnd - serverNow);
-    const fadeProgress = 1 - remaining / 1200;
-    const base: React.CSSProperties = { background: COLORS[prev] };
-
-    if (transition === "countdown") {
-      let digit = countdownDigit(remaining, 3);
-      if (digit > phaseRef.current.lastDigit) {
-        digit = phaseRef.current.lastDigit;
-      } else {
-        phaseRef.current.lastDigit = digit;
-      }
-      return {
-        style: base,
-        overlay: <div className="countdown-num">{digit}</div>,
-      };
-    }
-
-    if (transition === "blink") {
-      const on = Math.floor(serverNow / 220) % 2 === 0;
-      return {
-        style: on ? base : { background: "#111111" },
-        overlay: null,
-      };
-    }
-
-    if (transition === "fade") {
-      return {
-        style: {
-          ...base,
-          opacity: Math.max(0.2, 1 - Math.min(1, fadeProgress)),
-        },
-        overlay: null,
-      };
-    }
-
-    if (colorChanged) {
-      return { style: { background: "#000000" }, overlay: null };
-    }
-    return { style: { background: COLORS[next] }, overlay: null };
-  }, [transition, leadEnd, blackEnd, serverNow, prev, next, phaseRef]);
 }
