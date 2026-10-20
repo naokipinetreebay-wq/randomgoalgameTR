@@ -22,11 +22,13 @@ export function DisplayScreen({
   const next: GoalColor = snapshot.primaryColors[deviceId] || "blue";
   const prev: GoalColor = snapshot.previousColors?.[deviceId] ?? next;
   const colorChanged = prev !== next;
+  const deviceOffset = snapshot.deviceOffsets?.[deviceId] ?? 0;
 
   const phaseRef = useRef({
     roundId: -1,
     localStart: 0,
     transition: "instant" as TransitionMode,
+    offset: 0,
   });
 
   if (snapshot.roundId !== phaseRef.current.roundId) {
@@ -34,6 +36,7 @@ export function DisplayScreen({
       roundId: snapshot.roundId,
       localStart: Date.now(),
       transition: snapshot.transition,
+      offset: deviceOffset,
     };
   }
 
@@ -65,8 +68,8 @@ export function DisplayScreen({
     };
   }, []);
 
-  const { localStart, transition } = phaseRef.current;
-  const elapsed = Math.max(0, Date.now() - localStart);
+  const { localStart, transition, offset } = phaseRef.current;
+  const elapsed = Date.now() - localStart - offset;
 
   const leadMs =
     transition === "countdown"
@@ -81,7 +84,9 @@ export function DisplayScreen({
   let style: React.CSSProperties = { background: COLORS[next] };
   let overlay: React.ReactNode = null;
 
-  if (elapsed < leadMs) {
+  if (elapsed < 0) {
+    style = { background: COLORS[prev] };
+  } else if (elapsed < leadMs) {
     style = { background: COLORS[prev] };
     if (transition === "countdown") {
       overlay = <div className="countdown-num">{digitForElapsed(elapsed)}</div>;

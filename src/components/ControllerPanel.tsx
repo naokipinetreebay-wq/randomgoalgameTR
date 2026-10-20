@@ -248,6 +248,31 @@ export function ControllerPanel({
             <option value="random">毎回ランダム</option>
           </select>
         </label>
+        <label className="field">
+          <span>端末どうしの切替</span>
+          <select
+            value={cfg.syncMode || "simultaneous"}
+            onChange={(e) =>
+              patch({ syncMode: e.target.value as RoomConfig["syncMode"] })
+            }
+          >
+            <option value="simultaneous">いっせい（全端末同時）</option>
+            <option value="staggered">バラバラ（端末ごとに遅延）</option>
+          </select>
+        </label>
+        {(cfg.syncMode || "simultaneous") === "staggered" ? (
+          <label className="field">
+            <span>最大ずれ: {cfg.staggerMaxSeconds ?? 2}秒</span>
+            <input
+              type="range"
+              min={0.5}
+              max={5}
+              step={0.5}
+              value={cfg.staggerMaxSeconds ?? 2}
+              onChange={(e) => patch({ staggerMaxSeconds: Number(e.target.value) })}
+            />
+          </label>
+        ) : null}
       </section>
 
       <section className="panel">

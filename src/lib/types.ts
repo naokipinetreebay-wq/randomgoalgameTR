@@ -2,6 +2,7 @@ export type GoalColor = "blue" | "vermilion" | "yellow";
 export type TransitionMode = "instant" | "countdown" | "blink" | "fade";
 export type TimingMode = "fixed" | "random" | "manual";
 export type CountMode = "fixed" | "random";
+export type SyncMode = "simultaneous" | "staggered";
 export type Role = "controller" | "display";
 
 export interface ColorCountConfig {
@@ -20,6 +21,8 @@ export interface RoomConfig {
   fixedSeconds: number;
   randomMinSeconds: number;
   randomMaxSeconds: number;
+  syncMode: SyncMode;
+  staggerMaxSeconds: number;
   transition: TransitionMode | "random";
   running: boolean;
 }
@@ -38,6 +41,7 @@ export interface RoomSnapshot {
   roundId: number;
   primaryColors: Record<string, GoalColor>;
   previousColors: Record<string, GoalColor>;
+  deviceOffsets: Record<string, number>;
   colorCounts: Record<GoalColor, number>;
   nextChangeAt: number | null;
   transition: TransitionMode;
@@ -76,6 +80,8 @@ export const DEFAULT_CONFIG: RoomConfig = {
   fixedSeconds: 3,
   randomMinSeconds: 2,
   randomMaxSeconds: 5,
+  syncMode: "simultaneous",
+  staggerMaxSeconds: 2,
   transition: "countdown",
   running: false,
 };

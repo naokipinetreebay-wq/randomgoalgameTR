@@ -136,6 +136,7 @@ export class Room {
   transitionEndsAt: number | null = null;
   blackEndsAt: number | null = null;
   previousColors: Record<string, GoalColor> = {};
+  deviceOffsets: Record<string, number> = {};
   lastCounts: Record<GoalColor, number> = { blue: 0, vermilion: 0, yellow: 0 };
   lastActivity = Date.now();
   private timer: NodeJS.Timeout | null = null;
@@ -223,6 +224,8 @@ export class Room {
     this.config.fixedSeconds = clamp(this.config.fixedSeconds, 0.5, 60);
     this.config.randomMinSeconds = clamp(this.config.randomMinSeconds, 0.5, 60);
     this.config.randomMaxSeconds = clamp(this.config.randomMaxSeconds, 0.5, 60);
+    this.config.staggerMaxSeconds = clamp(this.config.staggerMaxSeconds ?? 2, 0, 10);
+    if (this.config.syncMode !== "staggered") this.config.syncMode = "simultaneous";
     if (this.config.colorCount !== 2 && this.config.colorCount !== 3) {
       this.config.colorCount = 3;
     }
@@ -291,6 +294,17 @@ export class Room {
       if (d) d.color = color;
     }
 
+    const offsets: Record<string, number> = {};
+    const maxStaggerMs =
+      this.config.syncMode === "staggered"
+        ? Math.max(0, (this.config.staggerMaxSeconds ?? 2) * 1000)
+        : 0;
+    for (const id of this.displays.keys()) {
+      offsets[id] =
+        maxStaggerMs > 0 ? Math.floor(Math.random() * (maxStaggerMs + 1)) : 0;
+    }
+    this.deviceOffsets = offsets;
+
     const lead = TRANSITION_LEAD_MS[this.transition];
     const now = Date.now();
     this.transitionEndsAt = now + lead;
@@ -303,7 +317,8 @@ export class Room {
     }
 
     const interval = nextIntervalMs(this.config);
-    this.nextChangeAt = now + Math.max(interval, lead + BLACK_GAP_MS + 200);
+    this.nextChangeAt =
+      now + Math.max(interval, lead + BLACK_GAP_MS + maxStaggerMs + 200);
     this.broadcast();
 
     const delay = this.nextChangeAt - Date.now();
@@ -334,6 +349,7 @@ export class Room {
       roundId: this.roundId,
       primaryColors,
       previousColors: { ...this.previousColors },
+      deviceOffsets: { ...this.deviceOffsets },
       colorCounts: { ...this.lastCounts },
       nextChangeAt: this.nextChangeAt,
       transition: this.transition,
