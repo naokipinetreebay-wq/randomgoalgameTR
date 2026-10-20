@@ -6,10 +6,10 @@ import { ClientSocket, RoomManager } from "./src/server/room";
 import type { ClientMessage } from "./src/lib/types";
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "0.0.0.0";
+const listenHost = "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 
-const app = next({ dev, hostname, port });
+const app = next({ dev, hostname: "localhost", port });
 const handle = app.getRequestHandler();
 const rooms = new RoomManager();
 
@@ -148,7 +148,7 @@ app.prepare().then(() => {
     });
   });
 
-  server.listen(port, hostname, () => {
-    console.log(`> Random Goal Game ready on http://${hostname}:${port}`);
+  server.listen(port, listenHost, () => {
+    console.log(`> Random Goal Game ready on http://${listenHost}:${port}`);
   });
 });
