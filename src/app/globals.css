@@ -427,6 +427,22 @@ select {
   gap: 12px;
 }
 
+.wizard-top-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.session-exit {
+  margin-top: 8px;
+}
+
+.session-exit-compact {
+  font-size: 0.85rem;
+  padding: 6px 10px;
+}
+
 .wizard-steps {
   list-style: none;
   margin: 0;

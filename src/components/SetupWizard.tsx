@@ -14,6 +14,7 @@ import {
   ControllerRoleChoice,
   type ControllerRoleMode,
 } from "@/components/ControllerRoleChoice";
+import { SessionExit } from "@/components/SessionExit";
 
 const STEPS = ["説明", "役割", "端末", "色", "切替", "確認"] as const;
 
@@ -128,8 +129,11 @@ export function SetupWizard({
           <p className="eyebrow">Random Goal · セットアップ</p>
           <h1>ルーム {snapshot.code}</h1>
         </div>
-        <div className={`pill ${connected ? "ok" : "bad"}`}>
-          {connected ? "接続中" : "再接続中…"}
+        <div className="wizard-top-actions">
+          <SessionExit compact />
+          <div className={`pill ${connected ? "ok" : "bad"}`}>
+            {connected ? "接続中" : "再接続中…"}
+          </div>
         </div>
       </header>
 
@@ -396,6 +400,8 @@ export function SetupWizard({
           </button>
         )}
       </footer>
+
+      <SessionExit onStop={() => send({ type: "stop" })} />
     </div>
   );
 }

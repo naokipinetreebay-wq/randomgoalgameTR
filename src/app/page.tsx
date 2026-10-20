@@ -33,8 +33,8 @@ export default function HomePage() {
           <button type="button" className="btn primary" disabled={busy} onClick={onCreate}>
             {busy ? "作成中…" : "ルームを作成"}
           </button>
-          <a className="btn linkish" href="https://tr.rojiura.app">
-            TRwebapp ポータルへ
+          <a className="btn" href="https://tr.rojiura.app">
+            ポータル（tr）に戻る
           </a>
         </div>
         {error ? (

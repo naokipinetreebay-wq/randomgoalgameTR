@@ -98,7 +98,12 @@ export default function ControllerPage() {
 
   return (
     <>
-      <ControllerPanel snapshot={snapshot} connected={connected} send={send} />
+      <ControllerPanel
+        snapshot={snapshot}
+        connected={connected}
+        send={send}
+        clearSessionKeys={[wizardKey, roleKey]}
+      />
       <div className="controller" style={{ paddingTop: 0, gap: 10 }}>
         {alsoDisplay ? (
           <button type="button" className="btn primary" onClick={() => setView("display")}>

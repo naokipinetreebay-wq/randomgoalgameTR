@@ -2,6 +2,7 @@
 
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo } from "react";
+import { SessionExit } from "@/components/SessionExit";
 import type { ClientMessage, ColorCountConfig, GoalColor, RoomConfig, RoomSnapshot } from "@/lib/types";
 import { COLOR_LABELS, COLORS } from "@/lib/types";
 
@@ -73,10 +74,12 @@ export function ControllerPanel({
   snapshot,
   connected,
   send,
+  clearSessionKeys,
 }: {
   snapshot: RoomSnapshot;
   connected: boolean;
   send: (msg: ClientMessage) => void;
+  clearSessionKeys?: string[];
 }) {
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
@@ -143,7 +146,7 @@ export function ControllerPanel({
               次へ
             </button>
             <button type="button" className="btn danger" onClick={() => send({ type: "stop" })}>
-              停止
+              一時停止
             </button>
           </div>
           <p className="muted">
@@ -298,6 +301,11 @@ export function ControllerPanel({
           </ul>
         )}
       </section>
+
+      <SessionExit
+        onStop={() => send({ type: "stop" })}
+        clearSessionKeys={clearSessionKeys}
+      />
     </div>
   );
 }
