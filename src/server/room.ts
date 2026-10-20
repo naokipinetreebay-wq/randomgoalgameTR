@@ -299,14 +299,20 @@ export class Room {
       if (d) d.color = color;
     }
 
-    const offsets: Record<string, number> = {};
+    const ids = [...this.displays.keys()];
     const maxStaggerMs =
       this.config.syncMode === "staggered"
         ? Math.max(0, (this.config.staggerMaxSeconds ?? 2) * 1000)
         : 0;
-    for (const id of this.displays.keys()) {
-      offsets[id] =
-        maxStaggerMs > 0 ? Math.floor(Math.random() * (maxStaggerMs + 1)) : 0;
+    // Spread devices across 0..max so staggered mode is visibly not simultaneous
+    const offsets: Record<string, number> = {};
+    if (maxStaggerMs > 0 && ids.length > 1) {
+      const order = shuffle(ids);
+      for (let i = 0; i < order.length; i++) {
+        offsets[order[i]] = Math.round((i / (order.length - 1)) * maxStaggerMs);
+      }
+    } else {
+      for (const id of ids) offsets[id] = 0;
     }
     this.deviceOffsets = offsets;
 
@@ -323,8 +329,9 @@ export class Room {
     }
 
     const interval = nextIntervalMs(this.config);
+    // Each device needs a full interval after its own offset
     this.nextChangeAt =
-      now + Math.max(interval, lead + BLACK_GAP_MS + maxStaggerMs + 200);
+      now + interval + maxStaggerMs + lead + BLACK_GAP_MS + 200;
     this.broadcast();
 
     const delay = this.nextChangeAt - Date.now();

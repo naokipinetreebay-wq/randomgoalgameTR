@@ -23,12 +23,18 @@ export function DisplayScreen({
   const colorChanged = prev !== next;
   const deviceOffset = snapshot.deviceOffsets?.[deviceId] ?? 0;
 
+  // Skew is sampled only when serverNow changes — otherwise estNow freezes and
+  // staggered offsets never elapse (all devices appear to flip together).
   const skewRef = useRef(0);
-  skewRef.current = snapshot.serverNow - Date.now();
+  const lastServerNowRef = useRef<number | null>(null);
+  if (lastServerNowRef.current !== snapshot.serverNow) {
+    lastServerNowRef.current = snapshot.serverNow;
+    skewRef.current = snapshot.serverNow - Date.now();
+  }
 
   const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 100);
+    const id = setInterval(() => setTick((n) => n + 1), 50);
     return () => clearInterval(id);
   }, []);
 
