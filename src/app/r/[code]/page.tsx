@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ControllerPanel } from "@/components/ControllerPanel";
 import type { ControllerRoleMode } from "@/components/ControllerRoleChoice";
 import { DisplayScreen } from "@/components/DisplayScreen";
@@ -28,6 +28,7 @@ export default function ControllerPage() {
     "display",
     alsoDisplay && ready ? displayId : ""
   );
+  const pendingStart = useRef(false);
 
   useEffect(() => {
     const done = sessionStorage.getItem(wizardKey) === "1";
@@ -44,6 +45,13 @@ export default function ControllerPage() {
     }, 800);
     return () => clearTimeout(t);
   }, [alsoDisplay, displayId, ready, send]);
+
+  useEffect(() => {
+    if (!pendingStart.current || !ready || !snapshot) return;
+    if (alsoDisplay && !snapshot.displays.some((d) => d.id === displayId)) return;
+    pendingStart.current = false;
+    send({ type: "start" });
+  }, [alsoDisplay, displayId, ready, send, snapshot]);
 
   if (error && !snapshot) {
     return (
@@ -78,6 +86,7 @@ export default function ControllerPage() {
         onDone={() => {
           sessionStorage.setItem(wizardKey, "1");
           if (roleMode) sessionStorage.setItem(roleKey, roleMode);
+          pendingStart.current = true;
           setReady(true);
           setView(roleMode === "alsoDisplay" ? "display" : "control");
         }}
