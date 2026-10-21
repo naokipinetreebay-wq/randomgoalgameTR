@@ -1,9 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;600;700&display=swap");
 
 :root {
-  --blue: #1e6bff;
-  --vermilion: #993333;
-  --yellow: #f5c400;
+  --blue: #00a651;
+  --vermilion: #e10600;
+  --yellow: #ffb000;
   --ink: #07110c;
   --foam: #f3f7f2;
   --panel: rgba(255, 255, 255, 0.92);

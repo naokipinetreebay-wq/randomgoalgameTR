@@ -27,7 +27,7 @@ export default function HomePage() {
         <p className="eyebrow">Random Goal · TRwebapp</p>
         <h1>ランダムゴール</h1>
         <p>
-          青・朱・黄のゴールが切り替わります。自分の色を狙う。無いときは守り抜く。
+          緑・赤・黄のゴールが切り替わります。自分の色を狙う。無いときは守り抜く。
         </p>
         <div className="home-actions">
           <button type="button" className="btn primary" disabled={busy} onClick={onCreate}>

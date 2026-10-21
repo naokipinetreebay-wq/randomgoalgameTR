@@ -151,7 +151,7 @@ export function SetupWizard({
           <div className="wizard-body">
             <h2>ランダムゴールとは</h2>
             <ul className="explain-list">
-              <li>各ゴール端末に<strong>青・朱・黄</strong>が付きます</li>
+              <li>各ゴール端末に<strong>緑・赤・黄</strong>が付きます</li>
               <li>選手は自分の色のゴールだけを狙います</li>
               <li>自分の色が0台のラウンドは<strong>守り時間</strong>です</li>
             </ul>
@@ -228,8 +228,8 @@ export function SetupWizard({
                 value={cfg.colorCount}
                 onChange={(e) => patch({ colorCount: Number(e.target.value) as 2 | 3 })}
               >
-                <option value={2}>2色（青・朱）</option>
-                <option value={3}>3色（青・朱・黄）</option>
+                <option value={2}>2色（緑・赤）</option>
+                <option value={3}>3色（緑・赤・黄）</option>
               </select>
             </label>
             {colors.map((c) => (

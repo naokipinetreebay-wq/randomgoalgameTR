@@ -163,8 +163,8 @@ export function ControllerPanel({
             value={cfg.colorCount}
             onChange={(e) => patch({ colorCount: Number(e.target.value) as 2 | 3 })}
           >
-            <option value={2}>2色（青・朱）</option>
-            <option value={3}>3色（青・朱・黄）</option>
+            <option value={2}>2色（緑・赤）</option>
+            <option value={3}>3色（緑・赤・黄）</option>
           </select>
         </label>
         {colors.map((c) => (

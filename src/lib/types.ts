@@ -87,14 +87,15 @@ export const DEFAULT_CONFIG: RoomConfig = {
   running: false,
 };
 
+/** 信号機: 緑 / 赤 / 黄 */
 export const COLORS: Record<GoalColor, string> = {
-  blue: "#1E6BFF",
-  vermilion: "#993333",
-  yellow: "#F5C400",
+  blue: "#00A651",
+  vermilion: "#E10600",
+  yellow: "#FFB000",
 };
 
 export const COLOR_LABELS: Record<GoalColor, string> = {
-  blue: "青",
-  vermilion: "朱",
+  blue: "緑",
+  vermilion: "赤",
   yellow: "黄",
 };
