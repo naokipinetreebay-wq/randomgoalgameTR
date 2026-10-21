@@ -333,6 +333,7 @@ export function ControllerPanel({
         {snapshot.displays.length === 0 ? (
           <p className="muted">まだゴール端末がありません。</p>
         ) : (
+          <>
           <ul className={`device-list${manualPick ? " picking" : ""}`}>
             {snapshot.displays.map((d) => {
               const chosen = picks[d.id] ?? d.color;
@@ -377,6 +378,7 @@ export function ControllerPanel({
               切り替え
             </button>
           ) : null}
+          </>
         )}
       </section>
 
