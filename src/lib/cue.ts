@@ -17,29 +17,20 @@ export function unlockCue(): boolean {
   return audio.state === "running";
 }
 
-/** Short electronic whistle, about 0.3s. */
+/** Short electronic pip, about 0.08s. */
 export function playWhistle() {
   const audio = audioContext();
   if (!audio || audio.state !== "running") return;
   const now = audio.currentTime;
   const osc = audio.createOscillator();
-  const osc2 = audio.createOscillator();
   const gain = audio.createGain();
-  osc.type = "sine";
-  osc2.type = "triangle";
-  osc.frequency.setValueAtTime(1700, now);
-  osc.frequency.exponentialRampToValueAtTime(2600, now + 0.1);
-  osc.frequency.exponentialRampToValueAtTime(2100, now + 0.28);
-  osc2.frequency.setValueAtTime(850, now);
-  osc2.frequency.exponentialRampToValueAtTime(1300, now + 0.1);
+  osc.type = "square";
+  osc.frequency.setValueAtTime(1480, now);
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+  gain.gain.exponentialRampToValueAtTime(0.06, now + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
   osc.connect(gain);
-  osc2.connect(gain);
   gain.connect(audio.destination);
   osc.start(now);
-  osc2.start(now);
-  osc.stop(now + 0.32);
-  osc2.stop(now + 0.32);
+  osc.stop(now + 0.09);
 }

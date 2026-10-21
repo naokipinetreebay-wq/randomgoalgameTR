@@ -261,7 +261,7 @@ export function ControllerPanel({
             onChange={(e) => patch({ sound: e.target.value as RoomConfig["sound"] })}
           >
             <option value="off">音なし</option>
-            <option value="on">音あり（ホイッスル）</option>
+            <option value="on">音あり（ぴっ）</option>
           </select>
         </label>
         <label className="field">
