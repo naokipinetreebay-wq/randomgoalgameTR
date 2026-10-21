@@ -154,9 +154,16 @@ export function ControllerPanel({
             <button type="button" className="btn primary" onClick={() => send({ type: "start" })}>
               開始
             </button>
-            <button type="button" className="btn" onClick={switchNow}>
-              {cfg.timingMode === "manual" ? "切り替え" : "次へ"}
-            </button>
+            {cfg.timingMode === "manual" && !manualPick ? (
+              <button type="button" className="btn" onClick={switchNow}>
+                切り替え
+              </button>
+            ) : null}
+            {cfg.timingMode !== "manual" ? (
+              <button type="button" className="btn" onClick={switchNow}>
+                次へ
+              </button>
+            ) : null}
             <button type="button" className="btn danger" onClick={() => send({ type: "stop" })}>
               一時停止
             </button>
@@ -326,40 +333,50 @@ export function ControllerPanel({
         {snapshot.displays.length === 0 ? (
           <p className="muted">まだゴール端末がありません。</p>
         ) : (
-          <ul className="device-list">
-            {snapshot.displays.map((d) => (
-              <li key={d.id}>
-                <span className="swatch" style={{ background: COLORS[d.color] }} />
-                <input
-                  className="label-input"
-                  value={d.label}
-                  onChange={(e) =>
-                    send({ type: "setLabel", deviceId: d.id, label: e.target.value })
-                  }
-                  placeholder="位置ラベル"
-                />
-                {manualPick ? (
-                  <select
-                    className="pick-select"
-                    value={picks[d.id] ?? d.color}
+          <ul className={`device-list${manualPick ? " picking" : ""}`}>
+            {snapshot.displays.map((d) => {
+              const chosen = picks[d.id] ?? d.color;
+              return (
+                <li key={d.id}>
+                  <span className="swatch" style={{ background: COLORS[d.color] }} />
+                  <input
+                    className="label-input"
+                    value={d.label}
                     onChange={(e) =>
-                      setPicks((prev) => ({
-                        ...prev,
-                        [d.id]: e.target.value as GoalColor,
-                      }))
+                      send({ type: "setLabel", deviceId: d.id, label: e.target.value })
                     }
-                  >
-                    {colors.map((c) => (
-                      <option key={c} value={c}>
-                        {COLOR_LABELS[c]}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <span className={`dot ${d.connected ? "ok" : "bad"}`} />
-              </li>
-            ))}
+                    placeholder="名前"
+                  />
+                  {manualPick ? (
+                    <div
+                      className={`color-toggles${colors.length === 2 ? " two" : ""}`}
+                      role="group"
+                      aria-label={`${d.label}の色`}
+                    >
+                      {colors.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          className={`color-toggle${chosen === c ? ` on on-${c}` : ""}`}
+                          onClick={() =>
+                            setPicks((prev) => ({ ...prev, [d.id]: c }))
+                          }
+                        >
+                          {COLOR_LABELS[c]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <span className={`dot ${d.connected ? "ok" : "bad"}`} />
+                </li>
+              );
+            })}
           </ul>
+          {manualPick ? (
+            <button type="button" className="btn primary switch-near" onClick={switchNow}>
+              切り替え
+            </button>
+          ) : null}
         )}
       </section>
 

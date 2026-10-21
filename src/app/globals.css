@@ -295,13 +295,56 @@ select {
   align-items: center;
 }
 
-.pick-select {
-  width: auto;
-  min-width: 4.5rem;
-  padding: 4px 6px;
+.device-list.picking li {
+  grid-template-columns: 22px minmax(3.6rem, 5.5rem) minmax(0, 1fr) 12px;
+  gap: 6px;
+}
+
+.device-list.picking .label-input {
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.color-toggles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.color-toggles.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.color-toggle {
   border: 1px solid var(--line);
   border-radius: 4px;
+  padding: 8px 0;
   background: #fff;
+  color: #243044;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.color-toggle.on-blue {
+  background: #00a651;
+  border-color: #00a651;
+  color: #fff;
+}
+
+.color-toggle.on-vermilion {
+  background: #e10600;
+  border-color: #e10600;
+  color: #fff;
+}
+
+.color-toggle.on-yellow {
+  background: #ffb000;
+  border-color: #ffb000;
+  color: #1a1400;
+}
+
+.switch-near {
+  margin-top: 12px;
 }
 
 .swatch {
