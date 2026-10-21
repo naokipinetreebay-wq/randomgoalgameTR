@@ -3,6 +3,7 @@ export type TransitionMode = "instant" | "countdown" | "blink" | "fade";
 export type TimingMode = "fixed" | "random" | "manual";
 export type CountMode = "fixed" | "random";
 export type SyncMode = "simultaneous" | "staggered";
+export type ManualAssign = "random" | "pick";
 export type Role = "controller" | "display";
 
 export interface ColorCountConfig {
@@ -25,6 +26,7 @@ export interface RoomConfig {
   staggerMaxSeconds: number;
   transition: TransitionMode | "random";
   sound: "off" | "on";
+  manualAssign: ManualAssign;
   running: boolean;
 }
 
@@ -58,7 +60,7 @@ export type ClientMessage =
   | { type: "setLabel"; deviceId: string; label: string }
   | { type: "start" }
   | { type: "stop" }
-  | { type: "next" }
+  | { type: "next"; colors?: Record<string, GoalColor> }
   | { type: "ping" };
 
 export type ServerMessage =
@@ -86,6 +88,7 @@ export const DEFAULT_CONFIG: RoomConfig = {
   staggerMaxSeconds: 2,
   transition: "countdown",
   sound: "off",
+  manualAssign: "random",
   running: false,
 };
 

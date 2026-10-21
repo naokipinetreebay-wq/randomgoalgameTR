@@ -154,7 +154,7 @@ app.prepare().then(() => {
           if (role === "controller") r.stop();
           break;
         case "next":
-          if (role === "controller") r.next();
+          if (role === "controller") r.next(msg.colors);
           break;
         case "ping":
           r.touch();

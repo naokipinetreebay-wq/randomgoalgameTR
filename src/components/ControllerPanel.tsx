@@ -1,7 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SessionExit } from "@/components/SessionExit";
 import type { ClientMessage, ColorCountConfig, GoalColor, RoomConfig, RoomSnapshot } from "@/lib/types";
 import { COLOR_LABELS, COLORS } from "@/lib/types";
@@ -93,6 +93,18 @@ export function ControllerPanel({
 
   const colors: GoalColor[] =
     cfg.colorCount === 2 ? ["blue", "vermilion"] : ["blue", "vermilion", "yellow"];
+  const manualPick = cfg.timingMode === "manual" && cfg.manualAssign === "pick";
+  const [picks, setPicks] = useState<Record<string, GoalColor>>({});
+
+  const switchNow = () => {
+    if (manualPick) {
+      const chosen: Record<string, GoalColor> = {};
+      for (const d of snapshot.displays) chosen[d.id] = picks[d.id] ?? d.color;
+      send({ type: "next", colors: chosen });
+      return;
+    }
+    send({ type: "next" });
+  };
 
   return (
     <div className="controller">
@@ -142,8 +154,8 @@ export function ControllerPanel({
             <button type="button" className="btn primary" onClick={() => send({ type: "start" })}>
               開始
             </button>
-            <button type="button" className="btn" onClick={() => send({ type: "next" })}>
-              次へ
+            <button type="button" className="btn" onClick={switchNow}>
+              {cfg.timingMode === "manual" ? "切り替え" : "次へ"}
             </button>
             <button type="button" className="btn danger" onClick={() => send({ type: "stop" })}>
               一時停止
@@ -190,11 +202,29 @@ export function ControllerPanel({
           >
             <option value="fixed">固定秒</option>
             <option value="random">ランダム秒</option>
-            <option value="manual">手動のみ（次へで切替）</option>
+            <option value="manual">手動のみ（切り替えボタン）</option>
           </select>
         </label>
         {cfg.timingMode === "manual" ? (
-          <p className="muted">手動中は自動では切り替わりません。「次へ」で進めてください。</p>
+          <>
+            <label className="field">
+              <span>手動の中身</span>
+              <select
+                value={cfg.manualAssign || "random"}
+                onChange={(e) =>
+                  patch({ manualAssign: e.target.value as RoomConfig["manualAssign"] })
+                }
+              >
+                <option value="random">ランダム表示（タイミングだけボタン）</option>
+                <option value="pick">色を指定して切り替え</option>
+              </select>
+            </label>
+            <p className="muted">
+              {manualPick
+                ? "各端末の色を選んで「切り替え」を押すと、その色になります。"
+                : "色は毎回ランダムです。「切り替え」を押したときだけ表示が変わります。"}
+            </p>
+          </>
         ) : null}
         {cfg.timingMode === "fixed" ? (
           <label className="field">
@@ -308,6 +338,24 @@ export function ControllerPanel({
                   }
                   placeholder="位置ラベル"
                 />
+                {manualPick ? (
+                  <select
+                    className="pick-select"
+                    value={picks[d.id] ?? d.color}
+                    onChange={(e) =>
+                      setPicks((prev) => ({
+                        ...prev,
+                        [d.id]: e.target.value as GoalColor,
+                      }))
+                    }
+                  >
+                    {colors.map((c) => (
+                      <option key={c} value={c}>
+                        {COLOR_LABELS[c]}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <span className={`dot ${d.connected ? "ok" : "bad"}`} />
               </li>
             ))}

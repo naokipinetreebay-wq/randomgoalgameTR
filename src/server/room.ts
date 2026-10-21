@@ -142,6 +142,7 @@ export class Room {
   lastCounts: Record<GoalColor, number> = { blue: 0, vermilion: 0, yellow: 0 };
   lastActivity = Date.now();
   private timer: NodeJS.Timeout | null = null;
+  private pendingColors: Record<string, GoalColor> | null = null;
 
   constructor(code: string) {
     this.code = code;
@@ -233,6 +234,7 @@ export class Room {
     this.config.staggerMaxSeconds = clamp(this.config.staggerMaxSeconds ?? 2, 0, 10);
     if (this.config.syncMode !== "staggered") this.config.syncMode = "simultaneous";
     if (this.config.sound !== "on") this.config.sound = "off";
+    if (this.config.manualAssign !== "pick") this.config.manualAssign = "random";
     if (this.config.colorCount !== 2 && this.config.colorCount !== 3) {
       this.config.colorCount = 3;
     }
@@ -245,6 +247,12 @@ export class Room {
   start() {
     this.config.running = true;
     this.touch();
+    if (this.config.timingMode === "manual") {
+      this.clearTimer();
+      this.nextChangeAt = null;
+      this.broadcast();
+      return;
+    }
     this.assignRound(true);
   }
 
@@ -258,8 +266,12 @@ export class Room {
     this.broadcast();
   }
 
-  next() {
+  next(colors?: Record<string, GoalColor>) {
     if (!this.config.running) this.config.running = true;
+    this.pendingColors =
+      this.config.timingMode === "manual" && this.config.manualAssign === "pick"
+        ? colors ?? null
+        : null;
     this.touch();
     this.assignRound(true);
   }
@@ -312,7 +324,28 @@ export class Room {
   }
 
   private assignColors(): Record<string, GoalColor> {
-    const ids = shuffle([...this.displays.keys()]);
+    const ids = [...this.displays.keys()];
+    if (
+      this.config.timingMode === "manual" &&
+      this.config.manualAssign === "pick"
+    ) {
+      const pending = this.pendingColors;
+      this.pendingColors = null;
+      const allowed = new Set(activeColors(this.config));
+      const result: Record<string, GoalColor> = {};
+      const counts: Record<GoalColor, number> = { blue: 0, vermilion: 0, yellow: 0 };
+      for (const id of ids) {
+        const chosen = pending?.[id];
+        const current = this.displays.get(id)?.color ?? "blue";
+        const color = chosen && allowed.has(chosen) ? chosen : current;
+        result[id] = color;
+        counts[color] += 1;
+      }
+      this.lastCounts = counts;
+      return result;
+    }
+
+    const shuffled = shuffle(ids);
     const n = ids.length;
     const counts = partitionCounts(this.config, n);
     this.lastCounts = counts;
@@ -320,7 +353,7 @@ export class Room {
     let idx = 0;
     for (const color of activeColors(this.config)) {
       for (let i = 0; i < counts[color]; i++) {
-        const id = ids[idx++];
+        const id = shuffled[idx++];
         if (id) result[id] = color;
       }
     }
