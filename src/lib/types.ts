@@ -24,6 +24,7 @@ export interface RoomConfig {
   syncMode: SyncMode;
   staggerMaxSeconds: number;
   transition: TransitionMode | "random";
+  sound: "off" | "on";
   running: boolean;
 }
 
@@ -84,6 +85,7 @@ export const DEFAULT_CONFIG: RoomConfig = {
   syncMode: "simultaneous",
   staggerMaxSeconds: 2,
   transition: "countdown",
+  sound: "off",
   running: false,
 };
 

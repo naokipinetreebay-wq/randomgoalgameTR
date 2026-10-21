@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { playWhistle, unlockCue } from "@/lib/cue";
 import { COLORS, GoalColor, RoomSnapshot } from "@/lib/types";
 
 const BLACK_MS = 280;
@@ -27,10 +28,23 @@ export function DisplayScreen({
   }
 
   const [, setTick] = useState(0);
+  const [soundReady, setSoundReady] = useState(false);
+  const heardRound = useRef<number | null>(null);
+  const soundOn = snapshot.config.sound === "on";
+
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 50);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!soundOn) return;
+    const arm = () => {
+      if (unlockCue()) setSoundReady(true);
+    };
+    window.addEventListener("pointerdown", arm);
+    return () => window.removeEventListener("pointerdown", arm);
+  }, [soundOn]);
 
   useEffect(() => {
     let wake: WakeLockSentinel | null = null;
@@ -58,6 +72,15 @@ export function DisplayScreen({
   const roundStartedAt = snapshot.roundStartedAt ?? snapshot.transitionEndsAt ?? Date.now();
   const estNow = Date.now() + skewRef.current;
   const elapsed = estNow - roundStartedAt - deviceOffset;
+  const showingNext = elapsed >= 0 && !(colorChanged && elapsed < BLACK_MS);
+
+  useEffect(() => {
+    if (!showingNext) return;
+    if (heardRound.current === snapshot.roundId) return;
+    const first = heardRound.current === null;
+    heardRound.current = snapshot.roundId;
+    if (!first && soundOn && soundReady && colorChanged) playWhistle();
+  }, [colorChanged, showingNext, snapshot.roundId, soundOn, soundReady]);
 
   let fillStyle: React.CSSProperties = { background: COLORS[next] };
   let overlay: React.ReactNode = null;
@@ -104,6 +127,11 @@ export function DisplayScreen({
     <div className="display-root">
       <div className="display-fill" style={fillStyle} />
       {overlay}
+      {soundOn && !soundReady ? (
+        <button type="button" className="sound-unlock" onClick={() => unlockCue() && setSoundReady(true)}>
+          音を鳴らすには画面をタップ
+        </button>
+      ) : null}
     </div>
   );
 }

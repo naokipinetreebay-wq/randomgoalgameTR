@@ -255,6 +255,16 @@ export function ControllerPanel({
           </select>
         </label>
         <label className="field">
+          <span>切替音</span>
+          <select
+            value={cfg.sound || "off"}
+            onChange={(e) => patch({ sound: e.target.value as RoomConfig["sound"] })}
+          >
+            <option value="off">音なし</option>
+            <option value="on">音あり（ホイッスル）</option>
+          </select>
+        </label>
+        <label className="field">
           <span>端末どうしの切替</span>
           <select
             value={cfg.syncMode || "simultaneous"}
