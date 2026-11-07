@@ -10,6 +10,7 @@ import type {
   RoomSnapshot,
 } from "@/lib/types";
 import { COLOR_LABELS, COLORS } from "@/lib/types";
+import { displayJoinUrl } from "@/lib/roomCode";
 import {
   ControllerRoleChoice,
   type ControllerRoleMode,
@@ -103,7 +104,7 @@ export function SetupWizard({
 
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/d/?code=${snapshot.code}`;
+    return displayJoinUrl(snapshot.code);
   }, [snapshot.code]);
 
   const patch = (partial: Partial<RoomConfig>) => {

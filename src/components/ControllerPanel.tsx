@@ -4,6 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { SessionExit } from "@/components/SessionExit";
 import type { ClientMessage, ColorCountConfig, GoalColor, RoomConfig, RoomSnapshot } from "@/lib/types";
+import { displayJoinUrl } from "@/lib/roomCode";
 import { COLOR_LABELS, COLORS } from "@/lib/types";
 
 function ColorCountEditor({
@@ -84,7 +85,7 @@ export function ControllerPanel({
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/d/?code=${snapshot.code}`;
+    return displayJoinUrl(snapshot.code);
   }, [snapshot.code]);
 
   const patch = (partial: Partial<RoomConfig>) => {
