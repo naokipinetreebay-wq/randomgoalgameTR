@@ -4,16 +4,17 @@
 
 姉妹アプリ（首振りスキャン）は同階層の `fieldscanTR` です。
 
-## 公開URL案（TRwebapp）
+## 公開 URL
 
 | 役割 | URL |
 |------|-----|
 | ポータル | https://tr.rojiura.app |
-| 本アプリ | https://randomgoal.rojiura.app |
+| 本アプリ | https://tr.rojiura.app/randomgoal/ |
+| ルーム／WS | https://tr-api.rojiura.app |
 
-ポータルから各トレーニングアプリへ誘導する想定です。
+旧ホスト `https://randomgoal.rojiura.app` は新 URL へ 301 します。
 
-## 起動
+## 起動（ローカル）
 
 ```bash
 npm install
@@ -26,12 +27,13 @@ npm run dev
 PORT=3001 npm run dev
 ```
 
-## 本番
+## 本番ビルド（Pages 用）
 
 ```bash
 npm run build
-npm start
 ```
+
+静的 export（`basePath: /randomgoal`）を `trwebapp` 配下へ載せて Pages デプロイします。詳細は `trwebapp/README.md`。
 
 ## ルール要点
 

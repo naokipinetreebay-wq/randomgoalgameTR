@@ -1,0 +1,8 @@
+name = "randomgoal-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-21"
+workers_dev = false
+
+[[routes]]
+pattern = "randomgoal.rojiura.app/*"
+zone_name = "rojiura.app"

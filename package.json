@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "next build",
-    "start": "NODE_ENV=production tsx server.ts",
+    "start": "node scripts/redirect-server.mjs",
     "lint": "next lint"
   },
   "dependencies": {
