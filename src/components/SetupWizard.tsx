@@ -103,7 +103,7 @@ export function SetupWizard({
 
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/d/${snapshot.code}`;
+    return `${window.location.origin}/d/?code=${snapshot.code}`;
   }, [snapshot.code]);
 
   const patch = (partial: Partial<RoomConfig>) => {

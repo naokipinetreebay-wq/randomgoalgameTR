@@ -1,16 +1,15 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ControllerPanel } from "@/components/ControllerPanel";
 import type { ControllerRoleMode } from "@/components/ControllerRoleChoice";
 import { DisplayScreen } from "@/components/DisplayScreen";
 import { SetupWizard } from "@/components/SetupWizard";
+import { useRoomCode } from "@/lib/roomCode";
 import { useDeviceId, useRoomSocket } from "@/lib/ws";
 
 export default function ControllerPage() {
-  const params = useParams<{ code: string }>();
-  const code = String(params.code || "").toUpperCase();
+  const code = useRoomCode();
   const deviceId = useDeviceId(`controller-${code}`);
   const displayId = useDeviceId(`controller-as-display-${code}`);
   const { snapshot, error, connected, send } = useRoomSocket(code, "controller", deviceId);
