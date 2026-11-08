@@ -79,12 +79,14 @@ export function ControllerPanel({
   send,
   clearSessionKeys,
   alsoDisplay = false,
+  onStart,
 }: {
   snapshot: RoomSnapshot;
   connected: boolean;
   send: (msg: ClientMessage) => void;
   clearSessionKeys?: string[];
   alsoDisplay?: boolean;
+  onStart?: () => void;
 }) {
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
@@ -156,7 +158,14 @@ export function ControllerPanel({
         <div className="panel">
           <h2>操作</h2>
           <div className="btn-row">
-            <button type="button" className="btn primary" onClick={() => send({ type: "start" })}>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                if (onStart) onStart();
+                else send({ type: "start" });
+              }}
+            >
               開始
             </button>
             {cfg.timingMode === "manual" && !manualPick ? (
@@ -175,6 +184,7 @@ export function ControllerPanel({
           </div>
           <p className="muted">
             状態: {cfg.running ? "ランニング" : "停止"} / ラウンド #{snapshot.roundId}
+            {alsoDisplay ? "（開始するとこの端末も色表示に切替）" : ""}
           </p>
         </div>
       </section>

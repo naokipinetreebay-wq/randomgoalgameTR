@@ -122,6 +122,10 @@ export default function ControllerPage() {
         send={send}
         clearSessionKeys={[wizardKey, roleKey]}
         alsoDisplay={alsoDisplay}
+        onStart={() => {
+          send({ type: "start" });
+          if (alsoDisplay) setView("display");
+        }}
       />
       <div className="controller" style={{ paddingTop: 0, gap: 10 }}>
         {alsoDisplay ? (
