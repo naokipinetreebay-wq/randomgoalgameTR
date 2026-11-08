@@ -46,6 +46,13 @@ export default function ControllerPage() {
   }, [alsoDisplay, displayId, ready, send]);
 
   useEffect(() => {
+    if (!alsoDisplay) return;
+    if (snapshot?.config.timingMode === "manual") {
+      send({ type: "updateConfig", config: { timingMode: "random" } });
+    }
+  }, [alsoDisplay, snapshot?.config.timingMode, send]);
+
+  useEffect(() => {
     if (!pendingStart.current || !ready || !snapshot) return;
     if (alsoDisplay && !snapshot.displays.some((d) => d.id === displayId)) return;
     pendingStart.current = false;
@@ -81,6 +88,9 @@ export default function ControllerPage() {
         onRoleModeChange={(mode) => {
           setRoleMode(mode);
           sessionStorage.setItem(roleKey, mode);
+          if (mode === "alsoDisplay" && snapshot.config.timingMode === "manual") {
+            send({ type: "updateConfig", config: { timingMode: "random" } });
+          }
         }}
         onDone={() => {
           sessionStorage.setItem(wizardKey, "1");
@@ -111,6 +121,7 @@ export default function ControllerPage() {
         connected={connected}
         send={send}
         clearSessionKeys={[wizardKey, roleKey]}
+        alsoDisplay={alsoDisplay}
       />
       <div className="controller" style={{ paddingTop: 0, gap: 10 }}>
         {alsoDisplay ? (

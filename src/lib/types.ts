@@ -27,6 +27,8 @@ export interface RoomConfig {
   transition: TransitionMode | "random";
   sound: "off" | "on";
   manualAssign: ManualAssign;
+  /** manual 切替時に 3→2→1 してから色を変える */
+  manualPreCountdown: boolean;
   running: boolean;
 }
 
@@ -106,6 +108,7 @@ export const DEFAULT_CONFIG: RoomConfig = {
   transition: "countdown",
   sound: "off",
   manualAssign: "random",
+  manualPreCountdown: false,
   running: false,
 };
 

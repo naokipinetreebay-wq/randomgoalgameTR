@@ -1,5 +1,7 @@
 "use client";
 
+import { NumberSelect } from "@/components/NumberSelect";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
 import type {
@@ -47,34 +49,34 @@ function ColorCountEditor({
       {cfg.mode === "fixed" ? (
         <label className="field">
           <span>固定台数: {cfg.fixed}</span>
-          <input
-            type="range"
+          <NumberSelect
             min={0}
             max={12}
+            step={1}
             value={cfg.fixed}
-            onChange={(e) => onChange({ ...cfg, fixed: Number(e.target.value) })}
+            onChange={(n) => onChange({ ...cfg, fixed: n })}
           />
         </label>
       ) : (
         <div className="row">
           <label className="field">
             <span>最小 {cfg.min}</span>
-            <input
-              type="range"
+            <NumberSelect
               min={0}
               max={12}
+              step={1}
               value={cfg.min}
-              onChange={(e) => onChange({ ...cfg, min: Number(e.target.value) })}
+              onChange={(n) => onChange({ ...cfg, min: n })}
             />
           </label>
           <label className="field">
             <span>最大 {cfg.max}</span>
-            <input
-              type="range"
+            <NumberSelect
               min={0}
               max={12}
+              step={1}
               value={cfg.max}
-              onChange={(e) => onChange({ ...cfg, max: Number(e.target.value) })}
+              onChange={(n) => onChange({ ...cfg, max: n })}
             />
           </label>
         </div>
@@ -177,12 +179,12 @@ export function SetupWizard({
             </p>
             <label className="field">
               <span>目標台数: {targetCount}</span>
-              <input
-                type="range"
+              <NumberSelect
                 min={1}
                 max={12}
+                step={1}
                 value={targetCount}
-                onChange={(e) => setTargetCount(Number(e.target.value))}
+                onChange={(n) => setTargetCount(n)}
               />
             </label>
             <p className="join-meter">
@@ -250,40 +252,60 @@ export function SetupWizard({
             <label className="field">
               <span>タイミング</span>
               <select
-                value={cfg.timingMode}
+                value={
+                  roleMode === "alsoDisplay" && cfg.timingMode === "manual"
+                    ? "random"
+                    : cfg.timingMode
+                }
                 onChange={(e) =>
                   patch({ timingMode: e.target.value as RoomConfig["timingMode"] })
                 }
               >
                 <option value="fixed">固定秒</option>
                 <option value="random">ランダム秒</option>
-                <option value="manual">手動のみ</option>
+                <option value="manual" disabled={roleMode === "alsoDisplay"}>
+                  手動のみ
+                  {roleMode === "alsoDisplay" ? " — この端末も表示のときは不可" : ""}
+                </option>
               </select>
             </label>
-            {cfg.timingMode === "manual" ? (
-              <label className="field">
-                <span>手動の中身</span>
-                <select
-                  value={cfg.manualAssign || "random"}
-                  onChange={(e) =>
-                    patch({ manualAssign: e.target.value as RoomConfig["manualAssign"] })
-                  }
-                >
-                  <option value="random">ランダム表示（タイミングだけボタン）</option>
-                  <option value="pick">色を指定して切り替え</option>
-                </select>
-              </label>
+            {cfg.timingMode === "manual" && roleMode !== "alsoDisplay" ? (
+              <>
+                <label className="field">
+                  <span>手動の中身</span>
+                  <select
+                    value={cfg.manualAssign || "random"}
+                    onChange={(e) =>
+                      patch({ manualAssign: e.target.value as RoomConfig["manualAssign"] })
+                    }
+                  >
+                    <option value="random">ランダム表示（タイミングだけボタン）</option>
+                    <option value="pick">色を指定して切り替え</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>切り替え方</span>
+                  <select
+                    value={cfg.manualPreCountdown ? "countdown" : "instant"}
+                    onChange={(e) =>
+                      patch({ manualPreCountdown: e.target.value === "countdown" })
+                    }
+                  >
+                    <option value="instant">即時に切り替わる</option>
+                    <option value="countdown">3・2・1 のあと切り替わる</option>
+                  </select>
+                </label>
+              </>
             ) : null}
             {cfg.timingMode === "fixed" ? (
               <label className="field">
                 <span>秒数: {cfg.fixedSeconds}</span>
-                <input
-                  type="range"
+                <NumberSelect
                   min={1}
                   max={10}
                   step={0.5}
                   value={cfg.fixedSeconds}
-                  onChange={(e) => patch({ fixedSeconds: Number(e.target.value) })}
+                  onChange={(n) => patch({ fixedSeconds: n })}
                 />
               </label>
             ) : null}
@@ -291,24 +313,22 @@ export function SetupWizard({
               <div className="row">
                 <label className="field">
                   <span>最小 {cfg.randomMinSeconds}s</span>
-                  <input
-                    type="range"
+                  <NumberSelect
                     min={1}
                     max={10}
                     step={0.5}
                     value={cfg.randomMinSeconds}
-                    onChange={(e) => patch({ randomMinSeconds: Number(e.target.value) })}
+                    onChange={(n) => patch({ randomMinSeconds: n })}
                   />
                 </label>
                 <label className="field">
                   <span>最大 {cfg.randomMaxSeconds}s</span>
-                  <input
-                    type="range"
+                  <NumberSelect
                     min={1}
                     max={10}
                     step={0.5}
                     value={cfg.randomMaxSeconds}
-                    onChange={(e) => patch({ randomMaxSeconds: Number(e.target.value) })}
+                    onChange={(n) => patch({ randomMaxSeconds: n })}
                   />
                 </label>
               </div>
@@ -353,15 +373,12 @@ export function SetupWizard({
             {(cfg.syncMode || "simultaneous") === "staggered" ? (
               <label className="field">
                 <span>最大ずれ: {cfg.staggerMaxSeconds ?? 2}秒</span>
-                <input
-                  type="range"
+                <NumberSelect
                   min={0.5}
                   max={5}
                   step={0.5}
                   value={cfg.staggerMaxSeconds ?? 2}
-                  onChange={(e) =>
-                    patch({ staggerMaxSeconds: Number(e.target.value) })
-                  }
+                  onChange={(n) => patch({ staggerMaxSeconds: n })}
                 />
               </label>
             ) : null}

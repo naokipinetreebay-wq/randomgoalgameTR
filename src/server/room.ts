@@ -147,6 +147,7 @@ export class Room {
   lastActivity = Date.now();
   private timer: NodeJS.Timeout | null = null;
   private pendingColors: Record<string, GoalColor> | null = null;
+  private pendingReveal: Record<string, GoalColor> | null = null;
   private packageIndex = 0;
 
   constructor(code: string) {
@@ -240,6 +241,7 @@ export class Room {
     if (this.config.syncMode !== "staggered") this.config.syncMode = "simultaneous";
     if (this.config.sound !== "on") this.config.sound = "off";
     if (this.config.manualAssign !== "pick") this.config.manualAssign = "random";
+    this.config.manualPreCountdown = !!this.config.manualPreCountdown;
     if (this.config.colorCount !== 2 && this.config.colorCount !== 3) {
       this.config.colorCount = 3;
     }
@@ -484,6 +486,38 @@ export class Room {
       previous[d.id] = d.color;
     }
     const colors = this.assignColors();
+    this.previousColors = previous;
+    this.pendingReveal = null;
+
+    if (this.config.manualPreCountdown) {
+      this.transition = "countdown";
+      this.pendingReveal = colors;
+      const now = Date.now();
+      this.roundStartedAt = now;
+      this.nextChangeAt = now + 3000;
+      this.transitionEndsAt = null;
+      this.blackEndsAt = null;
+      this.deviceOffsets = Object.fromEntries([...this.displays.keys()].map((id) => [id, 0]));
+      this.broadcast();
+      this.timer = setTimeout(() => this.revealManualRound(), 3000);
+      void fromManual;
+      return;
+    }
+
+    this.applyRevealColors(colors, previous);
+    void fromManual;
+  }
+
+  private revealManualRound() {
+    if (!this.pendingReveal) return;
+    const colors = this.pendingReveal;
+    const previous = { ...this.previousColors };
+    this.pendingReveal = null;
+    this.clearTimer();
+    this.applyRevealColors(colors, previous);
+  }
+
+  private applyRevealColors(colors: Record<string, GoalColor>, previous: Record<string, GoalColor>) {
     this.roundId += 1;
     this.transition = pickTransition(this.config);
     this.previousColors = previous;
@@ -495,7 +529,6 @@ export class Room {
 
     const ids = [...this.displays.keys()];
     const maxStaggerMs = this.maxStaggerMs();
-    // Spread devices across 0..max so staggered mode is visibly not simultaneous
     const offsets: Record<string, number> = {};
     if (maxStaggerMs > 0 && ids.length > 1) {
       const order = shuffle(ids);
@@ -512,10 +545,8 @@ export class Room {
     this.roundStartedAt = now;
     this.transitionEndsAt = now + lead;
     this.blackEndsAt = now + lead + BLACK_GAP_MS;
-
     this.nextChangeAt = null;
     this.broadcast();
-    void fromManual;
   }
 
   snapshot(): RoomSnapshot {

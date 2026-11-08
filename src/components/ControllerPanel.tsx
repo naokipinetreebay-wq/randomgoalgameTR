@@ -1,5 +1,7 @@
 "use client";
 
+import { NumberSelect } from "@/components/NumberSelect";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useState } from "react";
 import { SessionExit } from "@/components/SessionExit";
@@ -35,34 +37,34 @@ function ColorCountEditor({
       {cfg.mode === "fixed" ? (
         <label className="field">
           <span>固定台数: {cfg.fixed}</span>
-          <input
-            type="range"
+          <NumberSelect
             min={0}
             max={12}
+            step={1}
             value={cfg.fixed}
-            onChange={(e) => onChange({ ...cfg, fixed: Number(e.target.value) })}
+            onChange={(n) => onChange({ ...cfg, fixed: n })}
           />
         </label>
       ) : (
         <div className="row">
           <label className="field">
             <span>最小 {cfg.min}</span>
-            <input
-              type="range"
+            <NumberSelect
               min={0}
               max={12}
+              step={1}
               value={cfg.min}
-              onChange={(e) => onChange({ ...cfg, min: Number(e.target.value) })}
+              onChange={(n) => onChange({ ...cfg, min: n })}
             />
           </label>
           <label className="field">
             <span>最大 {cfg.max}</span>
-            <input
-              type="range"
+            <NumberSelect
               min={0}
               max={12}
+              step={1}
               value={cfg.max}
-              onChange={(e) => onChange({ ...cfg, max: Number(e.target.value) })}
+              onChange={(n) => onChange({ ...cfg, max: n })}
             />
           </label>
         </div>
@@ -76,11 +78,13 @@ export function ControllerPanel({
   connected,
   send,
   clearSessionKeys,
+  alsoDisplay = false,
 }: {
   snapshot: RoomSnapshot;
   connected: boolean;
   send: (msg: ClientMessage) => void;
   clearSessionKeys?: string[];
+  alsoDisplay?: boolean;
 }) {
   const cfg = snapshot.config;
   const displayUrl = useMemo(() => {
@@ -203,17 +207,25 @@ export function ControllerPanel({
         <label className="field">
           <span>切替</span>
           <select
-            value={cfg.timingMode}
+            value={alsoDisplay && cfg.timingMode === "manual" ? "random" : cfg.timingMode}
             onChange={(e) =>
               patch({ timingMode: e.target.value as RoomConfig["timingMode"] })
             }
           >
             <option value="fixed">固定秒</option>
             <option value="random">ランダム秒</option>
-            <option value="manual">手動のみ（切り替えボタン）</option>
+            <option value="manual" disabled={alsoDisplay}>
+              手動のみ（切り替えボタン）
+              {alsoDisplay ? " — この端末も表示のときは使えません" : ""}
+            </option>
           </select>
         </label>
-        {cfg.timingMode === "manual" ? (
+        {alsoDisplay && cfg.timingMode === "manual" ? (
+          <p className="muted">
+            この端末も表示対象のときは手動のみにできません。ランダム秒へ戻してください。
+          </p>
+        ) : null}
+        {cfg.timingMode === "manual" && !alsoDisplay ? (
           <>
             <label className="field">
               <span>手動の中身</span>
@@ -227,23 +239,37 @@ export function ControllerPanel({
                 <option value="pick">色を指定して切り替え</option>
               </select>
             </label>
+            <label className="field">
+              <span>切り替え方</span>
+              <select
+                value={cfg.manualPreCountdown ? "countdown" : "instant"}
+                onChange={(e) =>
+                  patch({ manualPreCountdown: e.target.value === "countdown" })
+                }
+              >
+                <option value="instant">即時に切り替わる</option>
+                <option value="countdown">3・2・1 のあと切り替わる</option>
+              </select>
+            </label>
             <p className="muted">
               {manualPick
                 ? "各端末の色を選んで「切り替え」を押すと、その色になります。"
                 : "色は毎回ランダムです。「切り替え」を押したときだけ表示が変わります。"}
+              {cfg.manualPreCountdown
+                ? " 押すと全表示が 3→2→1 のあと新しい色になります。"
+                : " 押すとすぐ新しい色になります。"}
             </p>
           </>
         ) : null}
         {cfg.timingMode === "fixed" ? (
           <label className="field">
             <span>秒数: {cfg.fixedSeconds}</span>
-            <input
-              type="range"
+            <NumberSelect
               min={1}
               max={10}
               step={0.5}
               value={cfg.fixedSeconds}
-              onChange={(e) => patch({ fixedSeconds: Number(e.target.value) })}
+              onChange={(n) => patch({ fixedSeconds: n })}
             />
           </label>
         ) : null}
@@ -251,24 +277,22 @@ export function ControllerPanel({
           <div className="row">
             <label className="field">
               <span>最小 {cfg.randomMinSeconds}s</span>
-              <input
-                type="range"
+              <NumberSelect
                 min={1}
                 max={10}
                 step={0.5}
                 value={cfg.randomMinSeconds}
-                onChange={(e) => patch({ randomMinSeconds: Number(e.target.value) })}
+                onChange={(n) => patch({ randomMinSeconds: n })}
               />
             </label>
             <label className="field">
               <span>最大 {cfg.randomMaxSeconds}s</span>
-              <input
-                type="range"
+              <NumberSelect
                 min={1}
                 max={10}
                 step={0.5}
                 value={cfg.randomMaxSeconds}
-                onChange={(e) => patch({ randomMaxSeconds: Number(e.target.value) })}
+                onChange={(n) => patch({ randomMaxSeconds: n })}
               />
             </label>
           </div>
@@ -317,13 +341,12 @@ export function ControllerPanel({
         {(cfg.syncMode || "simultaneous") === "staggered" ? (
           <label className="field">
             <span>最大ずれ: {cfg.staggerMaxSeconds ?? 2}秒</span>
-            <input
-              type="range"
+            <NumberSelect
               min={0.5}
               max={5}
               step={0.5}
               value={cfg.staggerMaxSeconds ?? 2}
-              onChange={(e) => patch({ staggerMaxSeconds: Number(e.target.value) })}
+              onChange={(n) => patch({ staggerMaxSeconds: n })}
             />
           </label>
         ) : null}
