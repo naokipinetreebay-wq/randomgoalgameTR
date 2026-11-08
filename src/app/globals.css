@@ -201,6 +201,13 @@ select {
   }
 }
 
+
+.profile-fields {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+
 .field {
   display: grid;
   gap: 6px;
