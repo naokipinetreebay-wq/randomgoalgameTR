@@ -1,18 +1,60 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientMessage, Role, RoomSnapshot, ServerMessage } from "./types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { HostOverlay } from "./localEngine";
+import { LocalMesh, type SignalEnvelope } from "./localMesh";
+import type {
+  ClientMessage,
+  Role,
+  RoomSnapshot,
+  ServerMessage,
+} from "./types";
 
 const PING_MS = 12_000;
 const RETRY_BASE_MS = 600;
 const RETRY_MAX_MS = 8_000;
 
-/** ルーム／WS は Cloudflare（tr-api）。UI は Pages（tr.rojiura.app）。 */
+/** ルーム参加・シグナリングは Cloudflare。プレー中のゲーム通信は WebRTC。 */
 export const TR_ROOMS_HOST = "tr-api.rojiura.app";
 
 function wsUrl(room: string, role: Role, deviceId: string): string {
   const q = new URLSearchParams({ room, role, deviceId, app: "randomgoal" });
   return `wss://${TR_ROOMS_HOST}/ws?${q}`;
+}
+
+function mergeOverlay(base: RoomSnapshot, overlay: Partial<HostOverlay>): RoomSnapshot {
+  const primaryColors = overlay.primaryColors
+    ? { ...base.primaryColors, ...overlay.primaryColors }
+    : base.primaryColors;
+  return {
+    ...base,
+    displays: base.displays.map((d) => ({
+      ...d,
+      color: overlay.primaryColors?.[d.id] ?? d.color,
+    })),
+    roundId: overlay.roundId ?? base.roundId,
+    primaryColors,
+    previousColors: overlay.previousColors ?? base.previousColors,
+    deviceOffsets: overlay.deviceOffsets ?? base.deviceOffsets,
+    colorCounts: overlay.colorCounts ?? base.colorCounts,
+    roundStartedAt: overlay.roundStartedAt ?? base.roundStartedAt,
+    nextChangeAt: overlay.nextChangeAt ?? base.nextChangeAt,
+    transition: overlay.transition ?? base.transition,
+    transitionEndsAt: overlay.transitionEndsAt ?? base.transitionEndsAt,
+    blackEndsAt: overlay.blackEndsAt ?? base.blackEndsAt,
+    playPackage:
+      base.config.running && base.config.timingMode !== "manual"
+        ? overlay.playPackage !== undefined
+          ? overlay.playPackage
+          : base.playPackage
+        : null,
+    serverNow: overlay.hostNow ?? base.serverNow,
+  };
+}
+
+/** この snapshot が来たらローカル overlay は捨てる（停止・初期化と同期）。 */
+function shouldResetOverlay(snapshot: RoomSnapshot): boolean {
+  return !snapshot.config.running;
 }
 
 export function useDeviceId(key: string): string {
@@ -30,10 +72,20 @@ export function useDeviceId(key: string): string {
 }
 
 export function useRoomSocket(room: string, role: Role, deviceId: string) {
-  const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
+  const [baseSnapshot, setBaseSnapshot] = useState<RoomSnapshot | null>(null);
+  const [overlay, setOverlay] = useState<Partial<HostOverlay> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [meshReady, setMeshReady] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
+  const meshRef = useRef<LocalMesh | null>(null);
+  const clientEventHandlers = useRef(new Set<(ev: ServerMessage) => void>());
+
+  const snapshot = useMemo(() => {
+    if (!baseSnapshot) return null;
+    if (!overlay) return baseSnapshot;
+    return mergeOverlay(baseSnapshot, overlay);
+  }, [baseSnapshot, overlay]);
 
   useEffect(() => {
     if (!room || !deviceId) return;
@@ -41,6 +93,36 @@ export function useRoomSocket(room: string, role: Role, deviceId: string) {
     let retry: ReturnType<typeof setTimeout> | null = null;
     let ping: ReturnType<typeof setInterval> | null = null;
     let attempt = 0;
+
+    const sendSignal = (env: SignalEnvelope) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(env));
+      }
+    };
+
+    const mesh = new LocalMesh({
+      role,
+      deviceId,
+      sendSignal,
+      onGameMessage: (msg) => {
+        const m = msg as ServerMessage | ClientMessage;
+        if (m && typeof m === "object" && "type" in m) {
+          if (m.type === "hostPush") {
+            setOverlay((prev) => ({
+              ...(prev ?? {}),
+              ...(m.overlay as Partial<HostOverlay>),
+            }));
+            setMeshReady((n) => n + 1);
+            return;
+          }
+          if (m.type === "clientEvent") {
+            for (const h of clientEventHandlers.current) h(m as ServerMessage);
+            return;
+          }
+        }
+      },
+    });
+    meshRef.current = mesh;
 
     const clearRetry = () => {
       if (retry) {
@@ -95,7 +177,22 @@ export function useRoomSocket(room: string, role: Role, deviceId: string) {
         } catch {
           return;
         }
-        if (msg.type === "snapshot") setSnapshot(msg.snapshot);
+        if (msg.type === "snapshot") {
+          const snapshot = msg.snapshot;
+          if (shouldResetOverlay(snapshot)) setOverlay(null);
+          setBaseSnapshot(snapshot);
+          if (role === "controller") {
+            for (const d of snapshot.displays) {
+              void mesh.ensurePeer(d.id);
+            }
+          }
+        }
+        if (msg.type === "signal") {
+          void mesh.handleSignal(msg as SignalEnvelope);
+        }
+        if (msg.type === "clientEvent") {
+          for (const h of clientEventHandlers.current) h(msg);
+        }
         if (msg.type === "error") setError(msg.message);
         if (msg.type === "pong") setError(null);
       };
@@ -140,6 +237,8 @@ export function useRoomSocket(room: string, role: Role, deviceId: string) {
       if (ping) clearInterval(ping);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", onVisibility);
+      mesh.destroy();
+      meshRef.current = null;
       try {
         wsRef.current?.close();
       } catch {
@@ -149,12 +248,50 @@ export function useRoomSocket(room: string, role: Role, deviceId: string) {
   }, [room, role, deviceId]);
 
   const send = useCallback((msg: ClientMessage) => {
+    const mesh = meshRef.current;
+    // プレー配信は WebRTC 優先（これがローカル化）。未接続ピア向けに WS も送る。
+    if (msg.type === "hostPush") {
+      setOverlay((prev) => ({
+        ...(prev ?? {}),
+        ...(msg.overlay as Partial<HostOverlay>),
+      }));
+      mesh?.broadcastGame(msg);
+    }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(msg));
     }
   }, []);
 
-  return { snapshot, error, connected, send };
+  const sendGame = useCallback((msg: unknown) => {
+    const mesh = meshRef.current;
+    if (role === "display") {
+      if (mesh?.sendGameToController(msg)) return true;
+    } else if (mesh?.broadcastGame(msg)) {
+      return true;
+    }
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+      return true;
+    }
+    return false;
+  }, [role]);
+
+  const onClientEvent = useCallback((handler: (ev: ServerMessage) => void) => {
+    clientEventHandlers.current.add(handler);
+    return () => {
+      clientEventHandlers.current.delete(handler);
+    };
+  }, []);
+
+  return {
+    snapshot,
+    error,
+    connected,
+    send,
+    sendGame,
+    onClientEvent,
+    meshPeers: meshReady,
+  };
 }
 
 export async function createRoom(): Promise<string> {
