@@ -5,6 +5,7 @@ import { ControllerPanel } from "@/components/ControllerPanel";
 import type { ControllerRoleMode } from "@/components/ControllerRoleChoice";
 import { DisplayScreen } from "@/components/DisplayScreen";
 import { SetupWizard } from "@/components/SetupWizard";
+import { useGoalLocalHost } from "@/lib/localHost";
 import { useRoomCode } from "@/lib/roomCode";
 import { useDeviceId, useRoomSocket } from "@/lib/ws";
 
@@ -13,6 +14,7 @@ export default function ControllerPage() {
   const deviceId = useDeviceId(`controller-${code}`);
   const displayId = useDeviceId(`controller-as-display-${code}`);
   const { snapshot, error, connected, send } = useRoomSocket(code, "controller", deviceId);
+  const { startLocal, stopLocal, nextLocal } = useGoalLocalHost(snapshot, send);
 
   const wizardKey = `rg-wizard-done-${code}`;
   const roleKey = `rg-ctrl-role-${code}`;
@@ -56,8 +58,8 @@ export default function ControllerPage() {
     if (!pendingStart.current || !ready || !snapshot) return;
     if (alsoDisplay && !snapshot.displays.some((d) => d.id === displayId)) return;
     pendingStart.current = false;
-    send({ type: "start" });
-  }, [alsoDisplay, displayId, ready, send, snapshot]);
+    startLocal();
+  }, [alsoDisplay, displayId, ready, snapshot, startLocal]);
 
   if (error && !snapshot) {
     return (
@@ -123,9 +125,11 @@ export default function ControllerPage() {
         clearSessionKeys={[wizardKey, roleKey]}
         alsoDisplay={alsoDisplay}
         onStart={() => {
-          send({ type: "start" });
+          startLocal();
           if (alsoDisplay) setView("display");
         }}
+        onStop={stopLocal}
+        onNext={nextLocal}
       />
       <div className="controller" style={{ paddingTop: 0, gap: 10 }}>
         {alsoDisplay ? (
